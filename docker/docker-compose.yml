@@ -1,0 +1,35 @@
+services:
+  # 1. MQTT Broker: Eclipse Mosquitto
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: machinocare-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - machinocare-net
+
+  # 2. Database: PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: machinocare-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: machinocare
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - machinocare-net
+
+networks:
+  machinocare-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

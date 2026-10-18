@@ -132,17 +132,39 @@ flowchart TD
         MQTT["MQTT Broker (Eclipse Mosquitto)<br/>Telemetry + Condition Results"]
     end
 
-    subgraph L5 ["5. BACKEND LAYER (Spring Boot API) - [MY RESPONSIBILITY]"]
+    subgraph L5 ["5. BACKEND LAYER (Spring Boot 3.3.4 / Java 21) - [MY RESPONSIBILITY]"]
         direction TB
-        B1["Device / Machine Management"]
-        B2["Telemetry Ingestion"]
-        B3["Condition / Fault Results"]
-        B4["Alert / Event Management"]
-        B5["Historical Data APIs"]
+        
+        subgraph L5_INGEST ["5.1 Inbound Ingestion & Validation Gateway"]
+            direction LR
+            B_ADAPTER["MQTT Inbound Adapter<br/>(Eclipse Paho Async Pool)"]
+            B_VAL["Jackson Deserializer & Validator<br/>(@Valid DTOs, Range & Null Checks)"]
+            B_ADAPTER -->|"Raw JSON Bytes"| B_VAL
+        end
+
+        subgraph L5_CORE ["5.2 Core Business Logic & State Machines"]
+            direction LR
+            B_DEV["Device & Machine Manager<br/>(Hardware Mapping, LWT Presence)"]
+            B_TELEM["Telemetry Pipeline<br/>(Feature Aggregation, Health Scoring)"]
+            B_ALERT["Alarm & Anomaly State Machine<br/>(Debouncing, Severity Escalation)"]
+        end
+
+        subgraph L5_DISPATCH ["5.3 Persistence & API Dispatch"]
+            direction LR
+            B_JPA["Spring Data JPA Layer<br/>(HikariCP Connection Pool)"]
+            B_API["REST Controllers & WebSocket<br/>(Historical Trends, Live UI Stream)"]
+        end
+
+        B_VAL -->|"Device Lifecycle"| B_DEV
+        B_VAL -->|"Sensor Metrics"| B_TELEM
+        B_VAL -->|"ML Classifications"| B_ALERT
+
+        B_DEV & B_TELEM & B_ALERT --> B_JPA
+        B_DEV & B_TELEM & B_ALERT --> B_API
     end
 
-    subgraph L6 ["6. DATA STORAGE LAYER (PostgreSQL) - [MY RESPONSIBILITY]"]
-        DB[("PostgreSQL Database<br/>Machine Information | Sensor Metadata | Telemetry | Extracted Features<br/>Classification Results | Fault Events | Alerts | Historical Measurements")]
+    subgraph L6 ["6. DATA STORAGE LAYER (PostgreSQL 16) - [MY RESPONSIBILITY]"]
+        DB[("PostgreSQL Database<br/>machines | devices | telemetry_records | condition_records | fault_alerts<br/>(Composite B-Tree Indexes on timestamp)")]
     end
 
     subgraph L7 ["7. PRESENTATION LAYER (Web Dashboard)"]
@@ -156,10 +178,10 @@ flowchart TD
     M1 --> S_ADXL & S_INA & S_DS & S_LM
     S_ADXL & S_INA & S_DS & S_LM --> E1
     E5 -->|"Wi-Fi / MQTT"| MQTT
-    MQTT --> L5
-    L5 --> L6
-    L6 --> L7
-    L5 -.->|"REST APIs / WebSocket"| L7
+    MQTT --> B_ADAPTER
+    B_JPA -->|"Write / Query Records"| DB
+    DB -->|"Historical Analytics"| B_API
+    B_API -->|"REST API / Live WebSocket Push"| D1 & D2 & D3 & D4
 ```
 
 ---

@@ -38,7 +38,70 @@ MachinoCare enforces a strict, first-class contract boundary between hardware ed
 
 ## 2. Comprehensive System Architecture
 
-The following Mermaid diagram details the end-to-end data flow, execution threads, and infrastructure components across all layers:
+### 7-Layer End-to-End Architectural Blueprint
+
+```text
+┌─ 1. PHYSICAL MACHINE LAYER
+│  12V DC Motor (RS-555 / RS-550) + 20-slot encoder disc on shaft
+│  Physical signals: mechanical vibration | electrical load | thermal heat
+└──────────────────────────────┬───────────────────────────────────
+                               ▼
+┌─ 2. SENSOR LAYER
+│  ADXL345  -> Vibration (X/Y/Z)        [I2C/SPI]
+│  INA219   -> Current + Voltage        [I2C]
+│  DS18B20  -> Temperature              [1-Wire]
+│  LM393    -> Optical RPM pulses       [GPIO interrupt, via 20-slot disc]
+└──────────────────────────────┬───────────────────────────────────
+                               ▼
+┌─ 3. EDGE DEVICE LAYER  (ESP32-WROOM-32) - [EDGE TEAM]
+│
+│  3.1 Data Acquisition
+│      Read ADXL345, INA219, DS18B20, LM393
+│          ▼
+│  3.2 Signal Processing
+│      Sampling > Timestamping > Filtering > Windowing > Normalization
+│          ▼
+│  3.3 Feature Extraction
+│      Vibration : RMS, Peak, Peak-to-Peak, Std Dev, Crest Factor,
+│                  FFT / Dominant Frequency, Frequency-band energy
+│      Other     : Current, Voltage, Temperature, RPM
+│          ▼
+│  3.4 Edge ML Inference (lightweight model, multi-sensor feature input)
+│      Output classes: NORMAL | IMBALANCE | LOOSE MOUNTING |
+│                      LOAD-RELATED ABNORMALITY
+│          ▼
+│  3.5 Machine Condition Result
+└──────────────────────────────┬───────────────────────────────────
+                               │  Wi-Fi / MQTT
+                               ▼
+┌─ 4. IoT / COMMUNICATION LAYER          - [MY RESPONSIBILITY]
+│  MQTT Broker (Eclipse Mosquitto): telemetry + condition results
+└──────────────────────────────┬───────────────────────────────────
+                               ▼
+┌─ 5. BACKEND LAYER (Spring Boot API)   - [MY RESPONSIBILITY]
+│  - Device / Machine Management
+│  - Telemetry Ingestion
+│  - Condition / Fault Results
+│  - Alert / Event Management
+│  - Historical Data APIs
+└──────────────────────────────┬───────────────────────────────────
+                               ▼
+┌─ 6. DATA STORAGE LAYER (PostgreSQL)   - [MY RESPONSIBILITY]
+│  Machine Information | Sensor Metadata | Telemetry | Extracted Features
+│  Classification Results | Fault Events | Alerts | Historical Measurements
+└──────────────────────────────┬───────────────────────────────────
+                               ▼
+┌─ 7. PRESENTATION LAYER (Web Dashboard)
+│  Live Monitoring   : Vibration, Current, Temperature, RPM
+│  Machine Health    : Normal | Warning | Abnormal
+│  Fault Detection   : Fault type, Confidence, Timestamp, Alert
+│  Also              : Historical Trends, FFT Visualization, Alerts, Reports
+└────────────────────────────────────────────────────────────────
+```
+
+### Visual Component & Data Flow Diagram
+
+The following Mermaid diagram details the end-to-end data flow, execution threads, and infrastructure components across these 7 layers:
 
 ```mermaid
 flowchart TD

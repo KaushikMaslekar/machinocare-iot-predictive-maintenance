@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: machinocare-backend
+
+  # Database configuration (PostgreSQL)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:machinocare}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # JPA / Hibernate configuration
+  jpa:
+    hibernate:
+      # In production and professional projects, Flyway manages schema DDL.
+      # Hibernate's ddl-auto should be 'validate' so it only checks schema parity.
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Flyway schema versioning
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# MachinoCare IoT & MQTT Settings
+machinocare:
+  mqtt:
+    broker-url: tcp://${MQTT_HOST:localhost}:${MQTT_PORT:1883}
+    client-id: machinocare-backend-${random.uuid}
+    topics:
+      status: machinocare/v1/devices/+/status
+      telemetry: machinocare/v1/devices/+/telemetry
+      condition: machinocare/v1/devices/+/condition
+    qos: 1
+    completion-timeout-ms: 5000
+
+logging:
+  level:
+    root: INFO
+    com.machinocare: DEBUG
+    org.springframework.integration.mqtt: INFO

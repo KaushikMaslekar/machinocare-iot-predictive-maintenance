@@ -94,10 +94,7 @@ flowchart TD
 
     subgraph BACKEND ["6. Backend Pipeline (Spring Boot 3.3.4 / Java 21)"]
         direction TB
-        PAHO["MqttPahoMessageDrivenChannelAdapter<br/>(Eclipse Paho Client Pool)"]
-        CHAN["Spring Integration MessageChannel<br/>(Async Worker Thread Pool)"]
-        VAL["DTO Deserializer & Jakarta Bean Validator<br/>(@Valid, Range Checks, Error Flags)"]
-        ROUTER["Inbound Message Router & Coordinator"]
+        INGEST["MQTT Ingestion & Validation Gateway<br/>(Asynchronous Stream Processing)"]
         
         subgraph SERVICES ["Domain Business Logic Layer"]
             DEVSVC["Device Lifecycle & Presence Service"]
@@ -105,13 +102,10 @@ flowchart TD
             ALERTSVC["Alarm Engine & Anomaly State Machine<br/>(Debouncing, Severity Escalation)"]
         end
 
-        MOSQ -->|"TCP Inbound Stream"| PAHO
-        PAHO --> CHAN
-        CHAN --> VAL
-        VAL --> ROUTER
-        ROUTER -->|"Status Messages"| DEVSVC
-        ROUTER -->|"Sensor Readings"| TELEMSVC
-        ROUTER -->|"Fault Labels"| ALERTSVC
+        MOSQ -->|"TCP Inbound Stream"| INGEST
+        INGEST -->|"Device Status"| DEVSVC
+        INGEST -->|"Sensor Telemetry"| TELEMSVC
+        INGEST -->|"Fault Condition"| ALERTSVC
     end
 
     subgraph STORAGE ["7. Persistence Layer (PostgreSQL 16)"]

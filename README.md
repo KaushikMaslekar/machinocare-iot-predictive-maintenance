@@ -105,103 +105,61 @@ The following Mermaid diagram details the end-to-end data flow, execution thread
 
 ```mermaid
 flowchart TD
-    subgraph PHYSICAL ["1. Physical Machine Layer"]
-        MOTOR["12V DC Motor (RS-550 / RS-555)"]
-        SHAFT["Rotating Shaft & Mechanical Load"]
-        MOTOR --> SHAFT
+    subgraph L1 ["1. PHYSICAL MACHINE LAYER"]
+        M1["12V DC Motor (RS-555 / RS-550) + 20-slot encoder disc on shaft<br/>Physical signals: mechanical vibration | electrical load | thermal heat"]
     end
 
-    subgraph SENSORS ["2. Sensor Instrumentation Layer"]
-        ADXL["ADXL345 Accelerometer<br/>(Tri-axial Vibration X/Y/Z)"]
-        INA["INA219 Current & Voltage Sensor<br/>(Bus V, Shunt mA, Power)"]
-        DS["DS18B20 1-Wire Probe<br/>(Motor Casing Temp °C)"]
-        LM["LM393 Optical Module<br/>(20-Slot Encoder Disc Pulse Count)"]
-        
-        SHAFT -.->|"Vibration Energy"| ADXL
-        MOTOR -.->|"Armature Current / Back-EMF"| INA
-        MOTOR -.->|"Thermal Conduction"| DS
-        SHAFT -.->|"Optical Transitions"| LM
+    subgraph L2 ["2. SENSOR LAYER"]
+        direction LR
+        S_ADXL["ADXL345<br/>Vibration (X/Y/Z)<br/>[I2C/SPI]"]
+        S_INA["INA219<br/>Current + Voltage<br/>[I2C]"]
+        S_DS["DS18B20<br/>Temperature<br/>[1-Wire]"]
+        S_LM["LM393<br/>Optical RPM pulses<br/>[GPIO via 20-slot disc]"]
     end
 
-    subgraph EDGE ["3. Edge Device Layer (ESP32-WROOM-32) - Edge Team"]
+    subgraph L3 ["3. EDGE DEVICE LAYER (ESP32-WROOM-32) - [EDGE TEAM]"]
         direction TB
-        ACQ["High-Frequency Sampling & ADC"]
-        SIG["Bandpass Filtering & Windowing"]
-        FFT["FFT & Statistical Feature Extraction<br/>(RMS, Peak, Crest Factor, Dominant Freq)"]
-        ML["Edge ML Inference Engine<br/>(TinyML Random Forest / SVM)"]
-        SER["JSON Serialization & LWT Manager<br/>(ArduinoJson / PubSubClient)"]
+        E1["3.1 Data Acquisition<br/>Read ADXL345, INA219, DS18B20, LM393"]
+        E2["3.2 Signal Processing<br/>Sampling > Timestamping > Filtering > Windowing > Normalization"]
+        E3["3.3 Feature Extraction<br/>Vibration: RMS, Peak, Peak-to-Peak, Std Dev, Crest Factor, FFT / Dominant Freq, Band Energy<br/>Other: Current, Voltage, Temperature, RPM"]
+        E4["3.4 Edge ML Inference (lightweight multi-sensor model)<br/>Output classes: NORMAL | IMBALANCE | LOOSE MOUNTING | LOAD-RELATED ABNORMALITY"]
+        E5["3.5 Machine Condition Result"]
 
-        ADXL --> ACQ
-        INA --> ACQ
-        DS --> ACQ
-        LM --> ACQ
-        ACQ --> SIG --> FFT --> ML --> SER
+        E1 --> E2 --> E3 --> E4 --> E5
     end
 
-    subgraph CONTRACT ["4. Data Contract Boundary (v1.0.0)"]
-        TOPIC_STATUS["machinocare/v1/devices/{id}/status<br/>(QoS 1, Retained, LWT)"]
-        TOPIC_TELEM["machinocare/v1/devices/{id}/telemetry<br/>(QoS 0, 1000ms Cadence)"]
-        TOPIC_COND["machinocare/v1/devices/{id}/condition<br/>(QoS 1, State Changes)"]
-        
-        SER --> TOPIC_STATUS
-        SER --> TOPIC_TELEM
-        SER --> TOPIC_COND
+    subgraph L4 ["4. IoT / COMMUNICATION LAYER - [MY RESPONSIBILITY]"]
+        MQTT["MQTT Broker (Eclipse Mosquitto)<br/>Telemetry + Condition Results"]
     end
 
-    subgraph IOT ["5. IoT Messaging Layer (Docker)"]
-        MOSQ["Eclipse Mosquitto MQTT Broker<br/>(Port 1883 TCP, Client Isolation Handling)"]
-        TOPIC_STATUS --> MOSQ
-        TOPIC_TELEM --> MOSQ
-        TOPIC_COND --> MOSQ
-    end
-
-    subgraph BACKEND ["6. Backend Pipeline (Spring Boot 3.3.4 / Java 21)"]
+    subgraph L5 ["5. BACKEND LAYER (Spring Boot API) - [MY RESPONSIBILITY]"]
         direction TB
-        INGEST["MQTT Ingestion & Validation Gateway<br/>(Asynchronous Stream Processing)"]
-        
-        subgraph SERVICES ["Domain Business Logic Layer"]
-            DEVSVC["Device Lifecycle & Presence Service"]
-            TELEMSVC["Telemetry Ingestion & Aggregation Service"]
-            ALERTSVC["Alarm Engine & Anomaly State Machine<br/>(Debouncing, Severity Escalation)"]
-        end
-
-        MOSQ -->|"TCP Inbound Stream"| INGEST
-        INGEST -->|"Device Status"| DEVSVC
-        INGEST -->|"Sensor Telemetry"| TELEMSVC
-        INGEST -->|"Fault Condition"| ALERTSVC
+        B1["Device / Machine Management"]
+        B2["Telemetry Ingestion"]
+        B3["Condition / Fault Results"]
+        B4["Alert / Event Management"]
+        B5["Historical Data APIs"]
     end
 
-    subgraph STORAGE ["7. Persistence Layer (PostgreSQL 16)"]
+    subgraph L6 ["6. DATA STORAGE LAYER (PostgreSQL) - [MY RESPONSIBILITY]"]
+        DB[("PostgreSQL Database<br/>Machine Information | Sensor Metadata | Telemetry | Extracted Features<br/>Classification Results | Fault Events | Alerts | Historical Measurements")]
+    end
+
+    subgraph L7 ["7. PRESENTATION LAYER (Web Dashboard)"]
         direction TB
-        FLYWAY["Flyway Migration Engine<br/>(V1__init_schema.sql)"]
-        
-        TBL_MACHINES[("machines<br/>(Name, Specs, Ratings)")]
-        TBL_DEVICES[("devices<br/>(ESP32 Metadata, Status, IP, RSSI)")]
-        TBL_TELEM[("telemetry_records<br/>(V, I, T, RPM, Vib Features, JSONB Status)")]
-        TBL_COND[("condition_records<br/>(ML Label, Confidence, Anomaly Score)")]
-        TBL_ALERTS[("fault_alerts<br/>(ACTIVE, ACKNOWLEDGED, RESOLVED)")]
-
-        IDX["Composite B-Tree Indexes<br/>(device_id, recorded_at DESC)"]
-
-        DEVSVC --> TBL_DEVICES
-        TELEMSVC --> TBL_TELEM
-        ALERTSVC --> TBL_COND
-        ALERTSVC --> TBL_ALERTS
-        TBL_MACHINES -.-> TBL_DEVICES
-        TBL_TELEM -.-> IDX
+        D1["Live Monitoring: Vibration, Current, Temperature, RPM"]
+        D2["Machine Health: Normal | Warning | Abnormal"]
+        D3["Fault Detection: Fault type, Confidence, Timestamp, Alert"]
+        D4["Analytics: Historical Trends, FFT Visualization, Alerts, Reports"]
     end
 
-    subgraph PRESENTATION ["8. Presentation & Client Layer"]
-        API["Spring MVC REST Controllers<br/>(/api/v1/machines, /telemetry/trends, /alerts)"]
-        WS["WebSocket / SSE Real-time Broadcaster"]
-        DASH["Web Dashboard<br/>(Health Gauges, FFT Spectral Plots, Alert Log)"]
-
-        TBL_TELEM --> API
-        TBL_ALERTS --> API
-        ALERTSVC --> WS
-        API --> DASH
-        WS --> DASH
-    end
+    M1 --> S_ADXL & S_INA & S_DS & S_LM
+    S_ADXL & S_INA & S_DS & S_LM --> E1
+    E5 -->|"Wi-Fi / MQTT"| MQTT
+    MQTT --> L5
+    L5 --> L6
+    L6 --> L7
+    L5 -.->|"REST APIs / WebSocket"| L7
 ```
 
 ---

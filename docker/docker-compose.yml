@@ -11,19 +11,17 @@ services:
     networks:
       - machinocare-net
 
-  # 2. Database: PostgreSQL 16
-  postgres:
-    image: postgres:16-alpine
-    container_name: machinocare-postgres
+  # 2. Database: MongoDB 7.0
+  mongodb:
+    image: mongo:7.0
+    container_name: machinocare-mongodb
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: machinocare
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: machinocare
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     networks:
       - machinocare-net
 
@@ -32,4 +30,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  mongo_data:

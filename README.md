@@ -3,7 +3,7 @@
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![MQTT](https://img.shields.io/badge/MQTT-Eclipse%20Mosquitto-red.svg)](https://mosquitto.org/)
-[![Database](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
+[![Database](https://img.shields.io/badge/MongoDB-7.0-47A248.svg)](https://www.mongodb.com/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 
 **MachinoCare** is an industrial condition-monitoring and predictive maintenance pipeline designed to detect electrical and mechanical degradation in **12V DC motors (RS-550 / RS-555)** in real time. Rather than relying on single-threshold alerts, MachinoCare correlates multi-sensor telemetry (vibration frequency spectra, electrical load, casing temperature, and rotational speed) with Edge-ML inference to diagnose root causes before catastrophic failure occurs.
@@ -30,7 +30,7 @@ MachinoCare enforces a strict, first-class contract boundary between hardware ed
                                            ▼
 ========================================================================================
    IoT & BACKEND PIPELINE (My Scope)
-   Broker -> Spring Integration -> Validation -> Domain Services -> PostgreSQL -> REST APIs -> Dashboard
+   Broker -> Spring Integration -> Validation -> Domain Services -> MongoDB -> REST APIs -> Dashboard
 ========================================================================================
 ```
 
@@ -86,9 +86,9 @@ MachinoCare enforces a strict, first-class contract boundary between hardware ed
 │  - Historical Data APIs
 └──────────────────────────────┬───────────────────────────────────
                                ▼
-┌─ 6. DATA STORAGE LAYER (PostgreSQL)   - [MY RESPONSIBILITY]
-│  Machine Information | Sensor Metadata | Telemetry | Extracted Features
-│  Classification Results | Fault Events | Alerts | Historical Measurements
+┌─ 6. DATA STORAGE LAYER (MongoDB)      - [MY RESPONSIBILITY]
+│  Machine Documents | Sensor Metadata | Telemetry Time-Series | Features
+│  Classification Results | Fault Events | Alerts | Historical Analytics
 └──────────────────────────────┬───────────────────────────────────
                                ▼
 ┌─ 7. PRESENTATION LAYER (Web Dashboard)
@@ -145,8 +145,8 @@ flowchart TD
         B5["5.5 Historical Data APIs<br/>• Use: Powers frontend dashboard with time-range analytics and real-time live push<br/>• Values: Historical trend curves, FFT spectrum arrays, motor health score, WebSocket live feed"]
     end
 
-    subgraph L6 ["6. DATA STORAGE LAYER (PostgreSQL 16) - [MY RESPONSIBILITY]"]
-        DB[("PostgreSQL Database<br/>machines | devices | telemetry_records | condition_records | fault_alerts<br/>(Composite B-Tree Indexes on timestamp)")]
+    subgraph L6 ["6. DATA STORAGE LAYER (MongoDB 7.0) - [MY RESPONSIBILITY]"]
+        DB[("MongoDB Database<br/>machines | devices | telemetry_records | condition_records | fault_alerts<br/>(Time-Series Collections & Compound Indexes)")]
     end
 
     subgraph L7 ["7. PRESENTATION LAYER (Web Dashboard)"]
@@ -164,7 +164,7 @@ flowchart TD
     MQTT -->|"telemetry topic"| B2
     MQTT -->|"condition topic"| B3
     B3 -->|"trigger alert"| B4
-    B1 & B2 & B4 -->|"persist"| DB
+    B1 & B2 & B4 -->|"persist documents"| DB
     DB -->|"query"| B5
     B5 -->|"REST APIs / WebSocket Push"| D1 & D2 & D3 & D4
 ```
@@ -203,10 +203,9 @@ Multi-sensor correlation prevents false positives. For example, increased curren
 ## 5. Technology Stack & Key Decisions
 
 * **Language & Runtime:** Java 21 (LTS) — utilizing modern Records, pattern matching, and Virtual Threads capability.
-* **Backend Framework:** Spring Boot 3.3.4 (Spring Web, Spring Integration MQTT, Spring Data JPA, Jakarta Bean Validation).
+* **Backend Framework:** Spring Boot 3.3.4 (Spring Web, Spring Integration MQTT, Spring Data MongoDB, Jakarta Bean Validation).
 * **Messaging Broker:** Eclipse Mosquitto 2.0 (Containerized via Docker Compose).
-* **Database & Migration:** PostgreSQL 16 (Alpine) with Flyway database migration versioning (`V1__init_schema.sql`).
-* **Connection Pooling:** HikariCP for high-throughput, low-latency database connection reuse.
+* **Database & Storage:** MongoDB 7.0 (Containerized via Docker Compose, Time-Series Collections).
 * **Edge Simulation:** Python 3.14 with `paho-mqtt` 2.1 for hardware-in-the-loop mocking and physics emulation.
 
 ---
@@ -221,7 +220,7 @@ MachinoCare - Predictive maintainance/
 │   └── contracts/
 │       └── edge-iot-data-contract.md       <-- Formal Data Contract Specification v1.0.0
 ├── docker/
-│   ├── docker-compose.yml                  <-- Mosquitto (port 1883) & PostgreSQL (port 5432)
+│   ├── docker-compose.yml                  <-- Mosquitto (port 1883) & MongoDB (port 27017)
 │   └── mosquitto/
 │       └── config/
 │           └── mosquitto.conf              <-- Broker configuration (listeners, logging)
@@ -257,7 +256,7 @@ docker compose ps
 
 ### 2. Verify Ports
 * **Mosquitto (MQTT):** `localhost:1883`
-* **PostgreSQL:** `localhost:5432` (`POSTGRES_DB=machinocare`, `POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=postgres`)
+* **MongoDB:** `localhost:27017` (Database: `machinocare`)
 
 ### 3. Run the Hardware Simulator / Packet Listener (Optional Testing)
 * To monitor live MQTT traffic:

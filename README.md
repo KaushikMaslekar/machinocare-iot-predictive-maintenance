@@ -208,7 +208,6 @@ Multi-sensor correlation prevents false positives. For example, increased curren
 * **Backend Framework:** Spring Boot 3.3.4 (Spring Web, Spring Integration MQTT, Spring Data MongoDB, Jakarta Bean Validation).
 * **Messaging Broker:** Eclipse Mosquitto 2.0 (Containerized via Docker Compose).
 * **Database & Storage:** MongoDB 7.0 (Containerized via Docker Compose, Time-Series Collections).
-* **Edge Simulation:** Python 3.14 with `paho-mqtt` 2.1 for hardware-in-the-loop mocking and physics emulation.
 
 ---
 
@@ -228,19 +227,15 @@ MachinoCare - Predictive maintainance/
 │   └── mosquitto/
 │       └── config/
 │           └── mosquitto.conf              <-- Broker configuration (listeners, logging)
-├── backend/                                <-- Spring Boot 3 / Java 21 Service
-│   ├── pom.xml                             <-- Maven dependencies and build plugins
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/machinocare/
-│       │   │   └── MachinoCareApplication.java
-│       │   └── resources/
-│       │       └── application.yml         <-- Central externalized configuration
-│       └── test/
-└── simulator/                              <-- Edge Hardware Testing & Mock Tools
-    ├── requirements.txt                    <-- Python dependencies (paho-mqtt)
-    ├── edge_simulator.py                   <-- Physics-based RS-550 DC motor simulator
-    └── live_listener.py                    <-- Real-time CLI MQTT packet sniffer
+└── backend/                                <-- Spring Boot 3 / Java 21 Service
+    ├── pom.xml                             <-- Maven dependencies and build plugins
+    └── src/
+        ├── main/
+        │   ├── java/com/machinocare/
+        │   │   └── MachinoCareApplication.java
+        │   └── resources/
+        │       └── application.yml         <-- Central externalized configuration
+        └── test/
 ```
 
 ---
@@ -262,17 +257,7 @@ docker compose ps
 * **Mosquitto (MQTT):** `localhost:1883`
 * **MongoDB:** `localhost:27017` (Database: `machinocare`)
 
-### 3. Run the Hardware Simulator / Packet Listener (Optional Testing)
-* To monitor live MQTT traffic:
-  ```powershell
-  python simulator/live_listener.py
-  ```
-* To simulate motor physics and inject faults:
-  ```powershell
-  python simulator/edge_simulator.py --mode cycle
-  ```
-
-### 4. Build & Run the Backend
+### 3. Build & Run the Backend
 ```powershell
 cd backend
 mvn clean compile

@@ -38,6 +38,8 @@ MachinoCare enforces a strict, first-class contract boundary between hardware ed
 
 ## 2. Comprehensive System Architecture
 
+> For in-depth trade-off analysis, deployment specifications (Local vs. Cloud/On-Premise), and technical rationale (MQTT vs. Firebase, MongoDB vs. PostgreSQL), see [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md).
+
 ### 7-Layer End-to-End Architectural Blueprint
 
 ```text
@@ -217,8 +219,10 @@ MachinoCare - Predictive maintainance/
 ├── README.md                               <-- Master Project Documentation
 ├── .gitignore                              <-- Git exclusions (Maven, Python, IDE)
 ├── docs/
+│   ├── architecture/
+│   │   └── system-architecture.md      <-- End-to-End Architecture, Deployment & Rationale
 │   └── contracts/
-│       └── edge-iot-data-contract.md       <-- Formal Data Contract Specification v1.0.0
+│       └── edge-iot-data-contract.md   <-- Formal Data Contract Specification v1.0.0
 ├── docker/
 │   ├── docker-compose.yml                  <-- Mosquitto (port 1883) & MongoDB (port 27017)
 │   └── mosquitto/

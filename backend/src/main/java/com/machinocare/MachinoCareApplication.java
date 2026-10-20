@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Orchestrates:
  * 1. MQTT Ingestion Pipeline (Spring Integration)
  * 2. Device & Machine Telemetry Services
- * 3. PostgreSQL Persistence & History
+ * 3. MongoDB 7.0 Persistence & History
  * 4. REST APIs & Alert Management
  */
 @SpringBootApplication

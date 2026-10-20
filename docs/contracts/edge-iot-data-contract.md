@@ -4,7 +4,7 @@
 
 This document defines the **first-class interface contract** between:
 1. **Edge Pipeline (ESP32 Firmware & Edge ML)**: Data acquisition from sensors (ADXL345, INA219, DS18B20, LM393), signal conditioning, feature extraction, and ML classification.
-2. **IoT & Backend Pipeline (Spring Boot & PostgreSQL)**: MQTT ingestion, payload validation, business logic, persistence, alerting, and dashboard APIs.
+2. **IoT & Backend Pipeline (Spring Boot & MongoDB 7.0)**: MQTT ingestion, payload validation, business logic, persistence, alerting, and dashboard APIs.
 
 Any change to topics, payload structure, units, sampling frequency, or enum values constitutes a **breaking contract change** and must be versioned.
 
